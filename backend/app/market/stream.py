@@ -14,14 +14,14 @@ from .cache import PriceCache
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/stream", tags=["streaming"])
-
 
 def create_stream_router(price_cache: PriceCache) -> APIRouter:
     """Create the SSE streaming router with a reference to the price cache.
 
-    This factory pattern lets us inject the PriceCache without globals.
+    A fresh APIRouter is created on each call so that repeated invocations
+    (e.g. in tests) do not register duplicate routes on a shared singleton.
     """
+    router = APIRouter(prefix="/api/stream", tags=["streaming"])
 
     @router.get("/prices")
     async def stream_prices(request: Request) -> StreamingResponse:
@@ -57,6 +57,9 @@ async def _generate_events(
 
     Sends all prices every `interval` seconds. Stops when the client
     disconnects (detected via request.is_disconnected()).
+
+    Uses cache.snapshot() to read prices and version under one lock,
+    eliminating the TOCTOU gap between reading version and reading prices.
     """
     # Tell the client to retry after 1 second if the connection drops
     yield "retry: 1000\n\n"
@@ -72,11 +75,9 @@ async def _generate_events(
                 logger.info("SSE client disconnected: %s", client_ip)
                 break
 
-            current_version = price_cache.version
+            prices, current_version = price_cache.snapshot()
             if current_version != last_version:
                 last_version = current_version
-                prices = price_cache.get_all()
-
                 if prices:
                     data = {ticker: update.to_dict() for ticker, update in prices.items()}
                     payload = json.dumps(data)

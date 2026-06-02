@@ -40,7 +40,7 @@ class MassiveDataSource(MarketDataSource):
 
     async def start(self, tickers: list[str]) -> None:
         self._client = RESTClient(api_key=self._api_key)
-        self._tickers = list(tickers)
+        self._tickers = [t.upper().strip() for t in tickers]
 
         # Do an immediate first poll so the cache has data right away
         await self._poll_once()
@@ -92,9 +92,11 @@ class MassiveDataSource(MarketDataSource):
             return
 
         try:
-            # The Massive RESTClient is synchronous — run in a thread to
-            # avoid blocking the event loop.
-            snapshots = await asyncio.to_thread(self._fetch_snapshots)
+            # Snapshot the ticker list in the event loop before handing off to
+            # the thread — prevents a race where add/remove_ticker mutates
+            # self._tickers while the thread is iterating it.
+            tickers_snapshot = list(self._tickers)
+            snapshots = await asyncio.to_thread(self._fetch_snapshots, tickers_snapshot)
             processed = 0
             for snap in snapshots:
                 try:
@@ -120,9 +122,9 @@ class MassiveDataSource(MarketDataSource):
             # Don't re-raise — the loop will retry on the next interval.
             # Common failures: 401 (bad key), 429 (rate limit), network errors.
 
-    def _fetch_snapshots(self) -> list:
+    def _fetch_snapshots(self, tickers: list[str]) -> list:
         """Synchronous call to the Massive REST API. Runs in a thread."""
         return self._client.get_snapshot_all(
             market_type=SnapshotMarketType.STOCKS,
-            tickers=self._tickers,
+            tickers=tickers,
         )

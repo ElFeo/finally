@@ -144,9 +144,10 @@ class GBMSimulator:
     # --- Internals ---
 
     def _add_ticker_internal(self, ticker: str) -> None:
-        """Add a ticker without rebuilding Cholesky (for batch initialization)."""
-        if ticker in self._prices:
-            return
+        """Add a ticker without rebuilding Cholesky (for batch initialization).
+
+        Callers must guard against duplicates before calling this.
+        """
         self._tickers.append(ticker)
         self._prices[ticker] = SEED_PRICES.get(ticker, random.uniform(50.0, 300.0))
         self._params[ticker] = TICKER_PARAMS.get(ticker, dict(DEFAULT_PARAMS))
@@ -169,7 +170,11 @@ class GBMSimulator:
                 corr[i, j] = rho
                 corr[j, i] = rho
 
-        self._cholesky = np.linalg.cholesky(corr)
+        try:
+            self._cholesky = np.linalg.cholesky(corr)
+        except np.linalg.LinAlgError:
+            logger.warning("Correlation matrix not positive-definite; falling back to no correlation")
+            self._cholesky = np.eye(n)
 
     @staticmethod
     def _pairwise_correlation(t1: str, t2: str) -> float:

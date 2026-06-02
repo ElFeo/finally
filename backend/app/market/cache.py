@@ -27,7 +27,7 @@ class PriceCache:
         If this is the first update for the ticker, previous_price == price (direction='flat').
         """
         with self._lock:
-            ts = timestamp or time.time()
+            ts = time.time() if timestamp is None else timestamp
             prev = self._prices.get(ticker)
             previous_price = prev.price if prev else price
 
@@ -51,6 +51,11 @@ class PriceCache:
         with self._lock:
             return dict(self._prices)
 
+    def snapshot(self) -> tuple[dict[str, PriceUpdate], int]:
+        """Return (prices_copy, version) under a single lock — avoids TOCTOU in SSE."""
+        with self._lock:
+            return dict(self._prices), self._version
+
     def get_price(self, ticker: str) -> float | None:
         """Convenience: get just the price float, or None."""
         update = self.get(ticker)
@@ -64,7 +69,8 @@ class PriceCache:
     @property
     def version(self) -> int:
         """Current version counter. Useful for SSE change detection."""
-        return self._version
+        with self._lock:
+            return self._version
 
     def __len__(self) -> int:
         with self._lock:
