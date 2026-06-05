@@ -219,3 +219,27 @@ frontend/out/
 
 # Environment
 .env
+
+# Shell / home dotfiles (should not be in project repo)
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.profile
+.ripgreprc
+.zprofile
+.zshrc
+
+# IDE and editor directories (local, not project config)
+.idea/
+.vscode/
+
+# MCP and Claude Code runtime files (device files / local only)
+.mcp.json
+.claude/agents
+.claude/commands
+.claude/hooks
+*/.mcp.json
+*/.claude/hooks
+*/.claude/agents
+*/.claude/commands
