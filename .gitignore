@@ -210,3 +210,12 @@ __marimo__/
 db/finally.db
 db/finally.db-shm
 db/finally.db-wal
+
+# Node dependencies
+node_modules/
+.next/
+frontend/out/
+.playwright-mcp/
+
+# Environment
+.env
