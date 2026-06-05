@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# FinAlly: SQLite database (persisted via Docker volume, not committed)
+db/finally.db
+db/finally.db-shm
+db/finally.db-wal

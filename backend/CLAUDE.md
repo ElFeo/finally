@@ -4,7 +4,7 @@
 
 ```bash
 cd backend
-uv sync --extra dev   # Install all dependencies including test/lint tools
+uv sync --dev   # Install all dependencies including test/lint tools
 ```
 
 ## Market Data API
@@ -27,7 +27,7 @@ from app.market import PriceCache, PriceUpdate, MarketDataSource, create_market_
   - `remove(ticker)`
   - `version` property — monotonic counter, increments on every update (for SSE change detection)
 
-- **`MarketDataSource`** — Abstract interface implemented by `SimulatorDataSource` and `MassiveDataSource`. Lifecycle: `start(tickers)` -> `add_ticker()` / `remove_ticker()` -> `stop()`.
+- **`MarketDataSource`** — Abstract interface implemented by `SimulatorDataSource` and `MassiveDataSource`. Lifecycle: `start(tickers)` → `add_ticker()` / `remove_ticker()` → `stop()`.
 
 - **`create_market_data_source(cache)`** — Factory. Returns `MassiveDataSource` if `MASSIVE_API_KEY` is set, otherwise `SimulatorDataSource`.
 
@@ -40,17 +40,57 @@ router = create_stream_router(price_cache)  # Returns FastAPI APIRouter
 # Endpoint: GET /api/stream/prices (text/event-stream)
 ```
 
-### Seed Data
+## Database API
 
-Default tickers: AAPL, GOOGL, MSFT, AMZN, TSLA, NVDA, META, JPM, V, NFLX. Seed prices and per-ticker volatility/drift params are in `app/market/seed_prices.py`.
+All DB operations are in `app/db/queries.py`. The connection is managed in `app/db/database.py`.
 
-## Running Tests
+```python
+from app.db import (
+    init_db, get_cash_balance, update_cash_balance,
+    get_watchlist, get_watchlist_tickers, add_to_watchlist, remove_from_watchlist,
+    get_positions, get_position, upsert_position, delete_position,
+    record_trade, record_snapshot, get_snapshots,
+    get_chat_messages, add_chat_message,
+)
+```
+
+- `init_db()` — Creates tables and seeds default data if the DB is empty. Safe to call on every startup.
+- DB path is read from the `DB_PATH` env var; defaults to `db/finally.db` relative to the project root.
+
+## LLM API
+
+```python
+from app.llm.client import get_chat_response
+from app.llm.schemas import ChatResponse, TradeAction, WatchlistAction
+
+response: ChatResponse = get_chat_response(
+    user_message="Buy 5 shares of AAPL",
+    portfolio_context={"cash": 9000, "positions": [...]},
+    chat_history=[{"role": "user", "content": "..."}, ...],
+)
+# response.message — text to show user
+# response.trades — list of TradeAction to auto-execute
+# response.watchlist_changes — list of WatchlistAction to apply
+```
+
+- Set `LLM_MOCK=true` to get deterministic responses without an API key.
+- Model: `openrouter/openai/gpt-oss-120b` routed through Cerebras for fast inference.
+
+## Testing
 
 ```bash
-uv run --extra dev pytest -v              # All tests
-uv run --extra dev pytest --cov=app       # With coverage
-uv run --extra dev ruff check app/ tests/ # Lint
+uv run pytest -v              # All tests
+uv run pytest --cov=app       # With coverage
+uv run ruff check app/ tests/ # Lint
 ```
+
+### SSE Tests
+
+Do **not** use `httpx.ASGITransport` to test SSE endpoints — it never sends a disconnect event, causing the infinite generator to hang. Instead, test `_generate_events()` directly by passing a mock request whose `is_disconnected()` coroutine returns `True` after N calls. See `tests/market/test_stream.py` for the pattern.
+
+## Seed Data
+
+Default tickers: AAPL, GOOGL, MSFT, AMZN, TSLA, NVDA, META, JPM, V, NFLX. Seed prices and per-ticker volatility/drift parameters are in `app/market/seed_prices.py`.
 
 ## Demo
 
