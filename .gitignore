@@ -231,8 +231,8 @@ frontend/out/
 .zshrc
 
 # IDE and editor directories (local, not project config)
-.idea/
-.vscode/
+.idea
+.vscode
 
 # MCP and Claude Code runtime files (device files / local only)
 .mcp.json
