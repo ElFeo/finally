@@ -82,5 +82,6 @@ frontend/
 - **LLM mock**: set `LLM_MOCK=true` for deterministic responses; used in all E2E tests
 - **SSE tests**: test the `_generate_events()` generator directly with a mock request; do not use httpx ASGI transport (it never sends disconnect events)
 - **Snapshot task**: background asyncio task records portfolio value every 30 seconds and immediately after each trade
+- **MASSIVE_API_KEY**: requires a paid Polygon.io plan (Starter or above). The free tier does not expose the `/v2/snapshot` endpoint used by `MassiveDataSource` — it returns 404. Leave `MASSIVE_API_KEY` empty to use the GBM simulator, which is the recommended default for development and demos.
 
 @planning/PLAN.md

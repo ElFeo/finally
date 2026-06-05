@@ -67,8 +67,12 @@ npm run build   # static export to frontend/out/
 | Variable | Required | Description |
 |---|---|---|
 | `OPENROUTER_API_KEY` | For AI chat | OpenRouter API key — get one at openrouter.ai |
-| `MASSIVE_API_KEY` | No | Massive (Polygon.io) key for real market data; omit to use the built-in simulator |
+| `MASSIVE_API_KEY` | No | Polygon.io API key for real market data. **Leave empty to use the built-in GBM simulator (recommended).** |
 | `LLM_MOCK` | No | Set `true` for deterministic mock LLM responses (E2E testing) |
+
+### Market data note
+
+The `MASSIVE_API_KEY` requires a **paid** Polygon.io plan (Starter or above). The free tier does not include the real-time snapshot endpoint the app uses and will return 404 errors. The built-in GBM (geometric Brownian motion) simulator is the recommended default — it produces realistic, continuously-updating prices with correlated moves across tickers and occasional volatility spikes, and requires no API key.
 
 ## Architecture
 
