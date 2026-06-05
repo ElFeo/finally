@@ -16,9 +16,9 @@ WORKDIR /app
 RUN pip install uv
 
 # Copy backend project files
-COPY backend/pyproject.toml backend/uv.lock* ./
-# Install dependencies (production only, no dev extras)
-RUN uv sync --no-dev
+COPY backend/pyproject.toml backend/uv.lock* backend/README.md ./
+# Install dependencies only (skip editable package build — app code copied next)
+RUN uv sync --no-dev --no-install-project
 
 # Copy backend application code
 COPY backend/app/ ./app/
